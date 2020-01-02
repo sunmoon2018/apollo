@@ -22,10 +22,10 @@ proto_library(
         ":calibration_table_proto_lib",
         ":control_command_proto_lib",
         ":gain_scheduler_conf_proto_lib",
+        ":input_debug_lib",
         ":leadlag_conf_proto_lib",
         ":mpc_controller_conf_proto_lib",
         ":mrac_conf_proto_lib",
-        ":input_debug_lib",
         ":pad_msg_lib",
         "//modules/canbus/proto:canbus_proto_lib",
         "//modules/common/proto:drive_state_proto_lib",
@@ -46,9 +46,7 @@ cc_proto_library(
 
 proto_library(
     name = "preprocessor_proto_lib",
-    srcs = [
-        "preprocessor.proto",
-    ],
+    srcs = ["preprocessor.proto"],
     deps = [
         ":input_debug_lib",
         ":local_view_proto_lib",
@@ -56,7 +54,6 @@ proto_library(
         "//modules/common/proto:header_proto_lib",
     ],
 )
-
 
 # local_view_proto
 cc_proto_library(
@@ -68,9 +65,7 @@ cc_proto_library(
 
 proto_library(
     name = "local_view_proto_lib",
-    srcs = [
-        "local_view.proto",
-    ],
+    srcs = ["local_view.proto"],
     deps = [
         ":pad_msg_lib",
         "//modules/canbus/proto:canbus_proto_lib",
@@ -90,9 +85,7 @@ cc_proto_library(
 
 proto_library(
     name = "control_command_proto_lib",
-    srcs = [
-        "control_cmd.proto",
-    ],
+    srcs = ["control_cmd.proto"],
     deps = [
         ":input_debug_lib",
         ":pad_msg_lib",
@@ -115,9 +108,7 @@ cc_proto_library(
 
 proto_library(
     name = "mpc_controller_conf_proto_lib",
-    srcs = [
-        "mpc_controller_conf.proto",
-    ],
+    srcs = ["mpc_controller_conf.proto"],
     deps = [
         ":calibration_table_proto_lib",
         ":gain_scheduler_conf_proto_lib",
@@ -134,9 +125,7 @@ cc_proto_library(
 
 proto_library(
     name = "gain_scheduler_conf_proto_lib",
-    srcs = [
-        "gain_scheduler_conf.proto",
-    ],
+    srcs = ["gain_scheduler_conf.proto"],
 )
 
 # leadlag_conf
@@ -149,9 +138,7 @@ cc_proto_library(
 
 proto_library(
     name = "leadlag_conf_proto_lib",
-    srcs = [
-        "leadlag_conf.proto",
-    ],
+    srcs = ["leadlag_conf.proto"],
 )
 
 # mrac_conf
@@ -164,9 +151,7 @@ cc_proto_library(
 
 proto_library(
     name = "mrac_conf_proto_lib",
-    srcs = [
-        "mrac_conf.proto",
-    ],
+    srcs = ["mrac_conf.proto"],
 )
 
 # calibration_table_proto
@@ -179,9 +164,7 @@ cc_proto_library(
 
 proto_library(
     name = "calibration_table_proto_lib",
-    srcs = [
-        "calibration_table.proto",
-    ],
+    srcs = ["calibration_table.proto"],
 )
 
 # control_common_conf_proto
@@ -194,9 +177,7 @@ cc_proto_library(
 
 proto_library(
     name = "control_common_conf_proto_lib",
-    srcs = [
-        "control_common_conf.proto",
-    ],
+    srcs = ["control_common_conf.proto"],
     deps = [
         ":pad_msg_lib",
         "//modules/canbus/proto:canbus_proto_lib",
@@ -213,9 +194,7 @@ cc_proto_library(
 
 proto_library(
     name = "pad_msg_lib",
-    srcs = [
-        "pad_msg.proto",
-    ],
+    srcs = ["pad_msg.proto"],
     deps = [
         "//modules/canbus/proto:canbus_proto_lib",
         "//modules/common/proto:header_proto_lib",
@@ -232,9 +211,7 @@ cc_proto_library(
 
 proto_library(
     name = "input_debug_lib",
-    srcs = [
-        "input_debug.proto",
-    ],
+    srcs = ["input_debug.proto"],
     deps = [
         "//modules/common/proto:header_proto_lib",
     ],

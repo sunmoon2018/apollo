@@ -20,7 +20,6 @@ cc_library(
     ],
     deps = [
         "//cyber",
-        "//modules/common",
         "//modules/common/adapters:adapter_gflags",
         "//modules/common/monitor_log",
         "//modules/common/proto:geometry_proto",
@@ -61,9 +60,7 @@ cc_test(
     name = "msf_localization_test",
     size = "small",
     timeout = "short",
-    srcs = [
-        "msf_localization_test.cc",
-    ],
+    srcs = ["msf_localization_test.cc"],
     copts = [
         "-Dprivate=public",
     ],

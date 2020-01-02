@@ -4,15 +4,10 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "websocket_handler",
-    srcs = [
-        "websocket_handler.cc",
-    ],
-    hdrs = [
-        "websocket_handler.h",
-    ],
+    srcs = ["websocket_handler.cc"],
+    hdrs = ["websocket_handler.h"],
     copts = ['-DMODULE_NAME=\\"dreamview\\"'],
     deps = [
-        "//modules/common",
         "//modules/common/time",
         "//modules/common/util:map_util",
         "//third_party/json",
@@ -23,33 +18,23 @@ cc_library(
 
 cc_library(
     name = "image_handler",
-    srcs = [
-        "image_handler.cc",
-    ],
-    hdrs = [
-        "image_handler.h",
-    ],
+    srcs = ["image_handler.cc"],
+    hdrs = ["image_handler.h"],
     copts = ['-DMODULE_NAME=\\"dreamview\\"'],
-    linkopts = [
-        "-lopencv_core",
-        "-lopencv_highgui",
-        "-lopencv_imgproc",
-    ],
     deps = [
         "//cyber",
         "//modules/common/adapters:adapter_gflags",
         "//modules/common/configs:config_gflags",
         "//modules/drivers/proto:sensor_proto",
         "@civetweb//:civetweb++",
+        "@opencv",
     ],
 )
 
 cc_test(
     name = "websocket_handler_test",
     size = "small",
-    srcs = [
-        "websocket_handler_test.cc",
-    ],
+    srcs = ["websocket_handler_test.cc"],
     deps = [
         ":websocket_handler",
         "//cyber",

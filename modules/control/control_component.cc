@@ -19,6 +19,7 @@
 #include "cyber/common/file.h"
 #include "cyber/common/log.h"
 #include "modules/common/adapters/adapter_gflags.h"
+#include "modules/common/latency_recorder/latency_recorder.h"
 #include "modules/common/time/time.h"
 #include "modules/common/vehicle_state/vehicle_state_provider.h"
 #include "modules/control/common/control_gflags.h"
@@ -38,7 +39,7 @@ ControlComponent::ControlComponent()
     : monitor_logger_buffer_(common::monitor::MonitorMessageItem::CONTROL) {}
 
 bool ControlComponent::Init() {
-  init_time_ = Clock::NowInSeconds();
+  init_time_ = Clock::Now();
 
   AINFO << "Control init, starting ...";
 
@@ -231,8 +232,7 @@ Status ControlComponent::ProduceControlCommand(
         local_view_.trajectory().header());
 
     if (local_view_.trajectory().is_replan()) {
-      latest_replan_trajectory_header_.CopyFrom(
-          local_view_.trajectory().header());
+      latest_replan_trajectory_header_ = local_view_.trajectory().header();
     }
 
     if (latest_replan_trajectory_header_.has_sequence_num()) {
@@ -276,7 +276,7 @@ Status ControlComponent::ProduceControlCommand(
 }
 
 bool ControlComponent::Proc() {
-  double start_timestamp = Clock::NowInSeconds();
+  const auto start_time = Clock::Now();
 
   chassis_reader_->Observe();
   const auto &chassis_msg = chassis_reader_->GetLatestObserved();
@@ -318,12 +318,28 @@ bool ControlComponent::Proc() {
     if (pad_msg != nullptr) {
       local_view_.mutable_pad_msg()->CopyFrom(pad_msg_);
     }
-    common::util::FillHeader(FLAGS_control_local_view_topic, &local_view_);
   }
 
   // use control submodules
   if (FLAGS_use_control_submodules) {
-    local_view_writer_->Write(std::make_shared<LocalView>(local_view_));
+    local_view_.mutable_header()->set_lidar_timestamp(
+        local_view_.trajectory().header().lidar_timestamp());
+    local_view_.mutable_header()->set_camera_timestamp(
+        local_view_.trajectory().header().camera_timestamp());
+    local_view_.mutable_header()->set_radar_timestamp(
+        local_view_.trajectory().header().radar_timestamp());
+    common::util::FillHeader(FLAGS_control_local_view_topic, &local_view_);
+
+    const auto end_time = Clock::Now();
+
+    // measure latency
+    static apollo::common::LatencyRecorder latency_recorder(
+        FLAGS_control_local_view_topic);
+    latency_recorder.AppendLatencyRecord(
+        local_view_.trajectory().header().lidar_timestamp(), start_time,
+        end_time);
+
+    local_view_writer_->Write(local_view_);
     return true;
   }
 
@@ -339,7 +355,8 @@ bool ControlComponent::Proc() {
 
   if (control_conf_.is_control_test_mode() &&
       control_conf_.control_test_duration() > 0 &&
-      (start_timestamp - init_time_) > control_conf_.control_test_duration()) {
+      absl::ToDoubleSeconds(start_time - init_time_) >
+          control_conf_.control_test_duration()) {
     AERROR << "Control finished testing. exit";
     return false;
   }
@@ -350,19 +367,10 @@ bool ControlComponent::Proc() {
   AERROR_IF(!status.ok()) << "Failed to produce control command:"
                           << status.error_message();
 
-  double end_timestamp = Clock::NowInSeconds();
-
   if (pad_received_) {
     control_command.mutable_pad_msg()->CopyFrom(pad_msg_);
     pad_received_ = false;
   }
-
-  const double time_diff_ms = (end_timestamp - start_timestamp) * 1000;
-  control_command.mutable_latency_stats()->set_total_time_ms(time_diff_ms);
-  control_command.mutable_latency_stats()->set_total_time_exceeded(
-      time_diff_ms > control_conf_.control_period());
-  ADEBUG << "control cycle time is: " << time_diff_ms << " ms.";
-  status.Save(control_command.mutable_header()->mutable_status());
 
   // forward estop reason among following control frames.
   if (estop_) {
@@ -385,7 +393,25 @@ bool ControlComponent::Proc() {
     return true;
   }
 
-  control_cmd_writer_->Write(std::make_shared<ControlCommand>(control_command));
+  const auto end_time = Clock::Now();
+
+  const double time_diff_ms = absl::ToDoubleMilliseconds(end_time - start_time);
+  control_command.mutable_latency_stats()->set_total_time_ms(time_diff_ms);
+  control_command.mutable_latency_stats()->set_total_time_exceeded(
+      time_diff_ms > control_conf_.control_period());
+  ADEBUG << "control cycle time is: " << time_diff_ms << " ms.";
+  status.Save(control_command.mutable_header()->mutable_status());
+
+  // measure latency
+  if (local_view_.trajectory().header().has_lidar_timestamp()) {
+    static apollo::common::LatencyRecorder latency_recorder(
+        FLAGS_control_command_topic);
+    latency_recorder.AppendLatencyRecord(
+        local_view_.trajectory().header().lidar_timestamp(), start_time,
+        end_time);
+  }
+
+  control_cmd_writer_->Write(control_command);
   return true;
 }
 

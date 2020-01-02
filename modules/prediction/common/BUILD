@@ -4,16 +4,14 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "prediction_gflags",
-    srcs = [
-        "prediction_gflags.cc",
-        "prediction_system_gflags.cc",
-    ],
-    hdrs = [
-        "prediction_gflags.h",
-        "prediction_system_gflags.h",
-    ],
-    deps = [
-    ],
+    srcs = ["prediction_gflags.cc"],
+    hdrs = ["prediction_gflags.h"],
+)
+
+cc_library(
+    name = "prediction_system_gflags",
+    srcs = ["prediction_system_gflags.cc"],
+    hdrs = ["prediction_system_gflags.h"],
 )
 
 cc_library(
@@ -104,6 +102,7 @@ cc_library(
         ":prediction_map",
         "//modules/prediction/common:prediction_constants",
         "//modules/prediction/common:prediction_gflags",
+        "//modules/prediction/common:prediction_system_gflags",
         "//modules/prediction/proto:lane_graph_proto",
     ],
 )
@@ -126,8 +125,6 @@ cc_test(
 cc_library(
     name = "kml_map_based_test",
     hdrs = ["kml_map_based_test.h"],
-    deps = [
-    ],
 )
 
 cc_library(
@@ -206,9 +203,7 @@ cc_test(
 cc_library(
     name = "message_process",
     srcs = ["message_process.cc"],
-    hdrs = [
-        "message_process.h",
-    ],
+    hdrs = ["message_process.h"],
     copts = [
         "-DMODULE_NAME=\\\"prediction\\\"",
     ],
@@ -262,7 +257,6 @@ cc_library(
         "//modules/prediction/container:container_manager",
         "//modules/prediction/container/pose:pose_container",
         "//modules/prediction/proto:feature_proto",
-        "//modules/prediction/proto:semantic_map_config_proto",
         "@opencv",
     ],
 )

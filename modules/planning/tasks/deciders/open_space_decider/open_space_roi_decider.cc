@@ -31,10 +31,7 @@ namespace planning {
 
 using apollo::common::ErrorCode;
 using apollo::common::Status;
-using apollo::common::VehicleConfigHelper;
 using apollo::common::math::Box2d;
-using apollo::common::math::CrossProd;
-using apollo::common::math::Polygon2d;
 using apollo::common::math::Vec2d;
 using apollo::hdmap::HDMapUtil;
 using apollo::hdmap::LaneInfoConstPtr;
@@ -120,7 +117,14 @@ Status OpenSpaceRoiDecider::Process(Frame *frame) {
 
     ADEBUG << "nearby_path: " << nearby_path.DebugString();
     ADEBUG << "found nearby_path";
-
+    if (!PlanningContext::Instance()
+             ->planning_status()
+             .park_and_go()
+             .has_adc_init_position()) {
+      const std::string msg = "ADC initial position is unavailable";
+      AERROR << msg;
+      return Status(ErrorCode::PLANNING_ERROR, msg);
+    }
     SetOriginFromADC(frame, nearby_path);
     ADEBUG << "SetOrigin";
     SetParkAndGoEndPose(frame);
@@ -152,6 +156,7 @@ void OpenSpaceRoiDecider::SetOriginFromADC(Frame *const frame,
   // get ADC box
   const auto &park_and_go_status =
       PlanningContext::Instance()->planning_status().park_and_go();
+
   const double adc_init_x = park_and_go_status.adc_init_position().x();
   const double adc_init_y = park_and_go_status.adc_init_position().y();
   const double adc_init_heading = park_and_go_status.adc_init_heading();
@@ -298,26 +303,39 @@ void OpenSpaceRoiDecider::SetPullOverSpotEndPose(Frame *const frame) {
 }
 
 void OpenSpaceRoiDecider::SetParkAndGoEndPose(Frame *const frame) {
-  const double kSTargetBuffer = 5.0;
-  const double kSpeedRatio = 0.8;  // after adjust speed is 80% of speed limit
+  const double kSTargetBuffer =
+      config_.open_space_roi_decider_config().end_pose_s_distance();
+  const double kSpeedRatio = 0.1;  // after adjust speed is 10% of speed limit
   // get vehicle current location
-  const ReferenceLineInfo &reference_line_info =
-      frame->reference_line_info().front();
-
-  ADEBUG << "reference_line ID: " << reference_line_info.Lanes().Id();
-  const auto &reference_line = reference_line_info.reference_line();
   // get vehicle s,l info
-  const auto &park_and_go_status =
-      PlanningContext::Instance()->planning_status().park_and_go();
+  auto park_and_go_status = PlanningContext::Instance()
+                                ->mutable_planning_status()
+                                ->mutable_park_and_go();
 
-  const double adc_init_x = park_and_go_status.adc_init_position().x();
-  const double adc_init_y = park_and_go_status.adc_init_position().y();
+  const double adc_init_x = park_and_go_status->adc_init_position().x();
+  const double adc_init_y = park_and_go_status->adc_init_position().y();
 
   ADEBUG << "ADC position (x): " << std::setprecision(9) << adc_init_x;
   ADEBUG << "ADC position (y): " << std::setprecision(9) << adc_init_y;
 
   const common::math::Vec2d adc_position = {adc_init_x, adc_init_y};
   common::SLPoint adc_position_sl;
+
+  // get nearest reference line
+  const auto &reference_line_list = frame->reference_line_info();
+  ADEBUG << reference_line_list.size();
+  const auto reference_line_info = std::min_element(
+      reference_line_list.begin(), reference_line_list.end(),
+      [&](const ReferenceLineInfo &ref_a, const ReferenceLineInfo &ref_b) {
+        common::SLPoint adc_position_sl_a;
+        common::SLPoint adc_position_sl_b;
+        ref_a.reference_line().XYToSL(adc_position, &adc_position_sl_a);
+        ref_b.reference_line().XYToSL(adc_position, &adc_position_sl_b);
+        return std::fabs(adc_position_sl_a.l()) <
+               std::fabs(adc_position_sl_b.l());
+      });
+
+  const auto &reference_line = reference_line_info->reference_line();
   reference_line.XYToSL(adc_position, &adc_position_sl);
 
   // target is at reference line
@@ -326,6 +344,9 @@ void OpenSpaceRoiDecider::SetParkAndGoEndPose(Frame *const frame) {
   const double target_x = reference_point.x();
   const double target_y = reference_point.y();
   double target_theta = reference_point.heading();
+
+  park_and_go_status->mutable_adc_adjust_end_pose()->set_x(target_x);
+  park_and_go_status->mutable_adc_adjust_end_pose()->set_y(target_y);
 
   ADEBUG << "center.x(): " << std::setprecision(9) << target_x;
   ADEBUG << "center.y(): " << std::setprecision(9) << target_y;
@@ -345,6 +366,10 @@ void OpenSpaceRoiDecider::SetParkAndGoEndPose(Frame *const frame) {
   end_pose->push_back(center.x());
   end_pose->push_back(center.y());
   end_pose->push_back(target_theta);
+
+  ADEBUG << "ADC position (x): " << std::setprecision(9) << (*end_pose)[0];
+  ADEBUG << "ADC position (y): " << std::setprecision(9) << (*end_pose)[1];
+  ADEBUG << "reference_line ID: " << reference_line_info->Lanes().Id();
 
   // end pose velocity set to be speed limit
   double target_speed = reference_line.GetSpeedLimitFromS(target_s);

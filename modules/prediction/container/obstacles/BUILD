@@ -16,8 +16,7 @@ cc_library(
         "//modules/prediction/container",
         "//modules/prediction/container/obstacles:obstacle",
         "//modules/prediction/proto:prediction_proto",
-        "//modules/prediction/proto:submodule_messages_proto",
-        "//modules/prediction/submodules:container_output",
+        "//modules/prediction/submodules:submodule_output",
     ],
 )
 
@@ -41,9 +40,7 @@ cc_library(
 cc_test(
     name = "obstacles_container_test",
     size = "small",
-    srcs = [
-        "obstacles_container_test.cc",
-    ],
+    srcs = ["obstacles_container_test.cc"],
     data = [
         "//modules/prediction:prediction_data",
         "//modules/prediction:prediction_testdata",
@@ -58,9 +55,7 @@ cc_test(
 cc_test(
     name = "obstacle_test",
     size = "small",
-    srcs = [
-        "obstacle_test.cc",
-    ],
+    srcs = ["obstacle_test.cc"],
     data = [
         "//modules/prediction:prediction_data",
         "//modules/prediction:prediction_testdata",
@@ -74,12 +69,8 @@ cc_test(
 
 cc_library(
     name = "obstacle_clusters",
-    srcs = [
-        "obstacle_clusters.cc",
-    ],
-    hdrs = [
-        "obstacle_clusters.h",
-    ],
+    srcs = ["obstacle_clusters.cc"],
+    hdrs = ["obstacle_clusters.h"],
     copts = [
         "-DMODULE_NAME=\\\"prediction\\\"",
     ],
@@ -92,9 +83,7 @@ cc_library(
 cc_test(
     name = "obstacle_clusters_test",
     size = "small",
-    srcs = [
-        "obstacle_clusters_test.cc",
-    ],
+    srcs = ["obstacle_clusters_test.cc"],
     data = [
         "//modules/prediction:prediction_data",
         "//modules/prediction:prediction_testdata",

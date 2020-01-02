@@ -4,21 +4,14 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "image_decompress_lib",
-    srcs = [
-        "image_decompress.cc",
-    ],
-    hdrs = [
-        "image_decompress.h",
-    ],
+    srcs = ["image_decompress.cc"],
+    hdrs = ["image_decompress.h"],
     copts = ['-DMODULE_NAME=\\"image_decompress\\"'],
-    linkopts = [
-        "-lopencv_core",
-        "-lopencv_highgui",
-    ],
     deps = [
         "//cyber",
         "//modules/drivers/proto:sensor_proto",
         "//modules/drivers/tools/image_decompress/proto:decompress_proto",
+        "@opencv",
     ],
 )
 

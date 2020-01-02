@@ -46,6 +46,7 @@
 namespace apollo {
 namespace planning {
 
+using apollo::canbus::Chassis;
 using apollo::common::EngageAdvice;
 using apollo::common::ErrorCode;
 using apollo::common::Status;
@@ -59,7 +60,6 @@ using apollo::hdmap::HDMapUtil;
 using apollo::planning_internal::SLFrameDebug;
 using apollo::planning_internal::SpeedPlan;
 using apollo::planning_internal::STGraphDebug;
-using apollo::routing::RoutingResponse;
 
 OnLanePlanning::~OnLanePlanning() {
   if (reference_line_provider_) {
@@ -237,6 +237,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     History::Instance()->Clear();
     PlanningContext::Instance()->mutable_planning_status()->Clear();
     reference_line_provider_->UpdateRoutingResponse(*local_view_.routing);
+    planner_->Init(config_);
   }
 
   // Update reference line provider and reset pull over if necessary
@@ -461,6 +462,7 @@ Status OnLanePlanning::Plan(
       EgoInfo::Instance()->front_clear_distance());
 
   if (frame_->open_space_info().is_on_open_space_trajectory()) {
+    frame_->mutable_open_space_info()->sync_debug_instance();
     const auto& publishable_trajectory =
         frame_->open_space_info().publishable_trajectory_data().first;
     const auto& publishable_trajectory_gear =
@@ -470,9 +472,17 @@ Status OnLanePlanning::Plan(
 
     // TODO(QiL): refine engage advice in open space trajectory optimizer.
     auto* engage_advice = ptr_trajectory_pb->mutable_engage_advice();
-    engage_advice->set_advice(EngageAdvice::KEEP_ENGAGED);
-    engage_advice->set_reason("Keep engage while in parking");
 
+    // enable start auto from open_space planner.
+    if (VehicleStateProvider::Instance()->vehicle_state().driving_mode() !=
+        Chassis::DrivingMode::Chassis_DrivingMode_COMPLETE_AUTO_DRIVE) {
+      engage_advice->set_advice(EngageAdvice::READY_TO_ENGAGE);
+      engage_advice->set_reason(
+          "Ready to engage when staring with OPEN_SPACE_PLANNER");
+    } else {
+      engage_advice->set_advice(EngageAdvice::KEEP_ENGAGED);
+      engage_advice->set_reason("Keep engage while in parking");
+    }
     // TODO(QiL): refine the export decision in open space info
     ptr_trajectory_pb->mutable_decision()
         ->mutable_main_decision()
@@ -510,10 +520,10 @@ Status OnLanePlanning::Plan(
               std::back_inserter(current_frame_planned_path));
     frame_->set_current_frame_planned_path(current_frame_planned_path);
 
+    ptr_debug->MergeFrom(best_ref_info->debug());
     if (FLAGS_export_chart) {
       ExportOnLaneChart(best_ref_info->debug(), ptr_debug);
     } else {
-      ptr_debug->MergeFrom(best_ref_info->debug());
       ExportReferenceLineDebug(ptr_debug);
       // Export additional ST-chart for failed lane-change speed planning
       const auto* failed_ref_info = frame_->FindFailedReferenceLineInfo();
